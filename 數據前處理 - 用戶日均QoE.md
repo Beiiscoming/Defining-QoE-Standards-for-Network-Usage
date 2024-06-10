@@ -1,0 +1,27 @@
+# 設置 RankedQoE 作為子查詢
+RankedQoE AS (
+    SELECT
+        x.日期,
+	x.地區,
+        x.訂戶編號,
+        x.Packets expected,
+        x.Packets lost,
+        (x.Packets expected - x.Packets lost) / x.Packets expected * 100 AS QoE
+    FROM
+        用戶的封包傳輸紀錄表 x
+)
+
+# 主查詢
+SELECT
+    UPPER(REPLACE(訂戶編號, ':', '')) AS 訂戶編號,  # 將訂戶編號中的 ':' 替換為空並轉換為大寫
+    地區,
+    AVG(QoE)  # 計算平均QoE
+FROM
+    RankedQoE
+WHERE
+    quality_packets_in >= 1000  # 只選擇封包數量大於等於 1000 的記錄
+    AND 訂戶編號 NOT LIKE '%000000000000%'  # 排除訂戶編號中包含 '000000000000' 的記錄
+    AND QoE <> 0  # 排除 QoE 為 0 的記錄
+    AND (日期 >= X1 AND 日期 <= X2) #選擇X時段之下的資料
+GROUP BY
+    訂戶編號  # 按訂戶編號分組
